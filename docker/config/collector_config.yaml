@@ -1,6 +1,6 @@
 
 default_pulling_interval: 1
-token: ""
+token: "RkNDllKKjEWnCfpgBbi2gJDKDuL9orHooOb85YL3"
 plugins:
   - type: postgresql
     name: postgresql-step2-test
@@ -9,3 +9,11 @@ plugins:
     database: !ENV ${SAMPLE_POSTGRES_DATABASE}
     user: !ENV ${SAMPLE_POSTGRES_USER}
     password: !ENV ${SAMPLE_POSTGRES_PASSWORD}
+
+  - type: postgresql
+    name: postgresql-step3-test-v0
+    host: !ENV ${TEST_ODD_COLLECTOR_POSTGRES_HOST}
+    port: 5432
+    database: !ENV ${TEST_ODD_COLLECTOR_POSTGRES_DATABASE}
+    user: !ENV ${TEST_ODD_COLLECTOR_POSTGRES_USER}
+    password: !ENV ${TEST_ODD_COLLECTOR_POSTGRES_PASSWORD}

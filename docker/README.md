@@ -84,6 +84,110 @@ You should be able to see 11 new entities of different types injected into the P
    See a documentation [here](https://github.com/opendatadiscovery/odd-collector/blob/main/README.md)
 2. Restart the Collector by running **from the project root folder** `docker-compose -f docker/demo.yaml restart odd-collector`
 
+
+#### QuickStart: plugin your postgresql data
+
+1. Set postgresql service in odd-platform/docker/demo.yaml file
+    - Docker service config example
+        ```
+          test-odd-collector-postgresql:
+            image: postgres:13.2-alpine
+            # restart: always
+            volumes:
+            - ./config/dump.sql:/docker-entrypoint-initdb.d/init.sql
+            environment:
+            - POSTGRES_USER=${TEST_ODD_COLLECTOR_POSTGRES_USER}
+            - POSTGRES_PASSWORD=${TEST_ODD_COLLECTOR_POSTGRES_PASSWORD}
+            - POSTGRES_DATABASE=${TEST_ODD_COLLECTOR_POSTGRES_DATABASE} 
+        ```
+2. Open `.env` file to set postgresql config
+    - Example
+        ```
+        TEST_ODD_COLLECTOR_POSTGRES_HOST=test-odd-collector-postgresql
+        TEST_ODD_COLLECTOR_POSTGRES_USER=test_odd_collector_postgresql
+        TEST_ODD_COLLECTOR_POSTGRES_PASSWORD=test_odd_collector_postgresql_password
+        TEST_ODD_COLLECTOR_POSTGRES_DATABASE=test_odd_collector_postgresql
+        ```
+
+3. Add your postgresql service name to `odd-collector depends_on` in odd-platform/docker/demo.yaml
+    - Example ( Your postgresql service name: `test-odd-collector-postgresql` )
+        ```
+          odd-collector:
+            image: ghcr.io/opendatadiscovery/odd-collector:latest
+            # restart: always
+            volumes:
+            - ./config/collector_config.yaml:/app/collector_config.yaml
+            environment:
+            - PLATFORM_HOST_URL=${PLATFORM_HOST_URL}
+            - SAMPLE_POSTGRES_HOST=sample-postgresql
+            - SAMPLE_POSTGRES_USER=${SAMPLE_POSTGRES_USER}
+            - SAMPLE_POSTGRES_DATABASE=${SAMPLE_POSTGRES_DATABASE}
+            - SAMPLE_POSTGRES_PASSWORD=${SAMPLE_POSTGRES_PASSWORD}
+            
+            depends_on:
+            - sample-postgresql
+            - test-odd-collector-postgresql
+        ```
+
+4. Open odd-platform/docker/config/collector_config.yaml
+    - Edit odd-platform plugin to mapping your postgresql service
+        ```
+          - type: postgresql
+            name: postgresql-step3-test-v0
+            host: !ENV ${TEST_ODD_COLLECTOR_POSTGRES_HOST}
+            port: 5432
+            database: !ENV ${TEST_ODD_COLLECTOR_POSTGRES_DATABASE}
+            user: !ENV ${TEST_ODD_COLLECTOR_POSTGRES_USER}
+            password: !ENV ${TEST_ODD_COLLECTOR_POSTGRES_PASSWORD}
+        ```
+
+5. Active `odd-platform-enricher` service
+    ```
+    cd odd-platform
+    docker-compose -f docker/demo.yaml up -d odd-platform-enricher
+    ```
+
+6. Open collectors page to add a new collector
+    - http://localhost:8080/management/collectors
+
+7. Copy new collector token & paste it to token in collector_config.yaml
+    - odd-platform/docker/config/collector_config.yaml
+    - Example
+        ```
+        default_pulling_interval: 1
+        token: "new collector token"
+        plugins:
+        - type: postgresql
+            name: postgresql-step2-test
+            host: !ENV ${SAMPLE_POSTGRES_HOST}
+            port: 5432
+            database: !ENV ${SAMPLE_POSTGRES_DATABASE}
+            user: !ENV ${SAMPLE_POSTGRES_USER}
+            password: !ENV ${SAMPLE_POSTGRES_PASSWORD}
+
+        - type: postgresql
+            name: postgresql-step3-test-v0
+            host: !ENV ${TEST_ODD_COLLECTOR_POSTGRES_HOST}
+            port: 5432
+            database: !ENV ${TEST_ODD_COLLECTOR_POSTGRES_DATABASE}
+            user: !ENV ${TEST_ODD_COLLECTOR_POSTGRES_USER}
+            password: !ENV ${TEST_ODD_COLLECTOR_POSTGRES_PASSWORD}
+        ```
+
+8. Active `odd-collector` service
+    ```
+    docker-compose -f docker/demo.yaml up -d odd-collector
+    ```
+
+9. Check your postgresql datasource exists in odd-platform datasources page
+    - http://localhost:8080/management/datasources
+    - datasource name: postgresql-step3-test-v0
+
+
+10. Go to the Catalog section. Select the created data source in the Datasources filter
+    - Notice: The result need to be waited for 5~20 seconds. ( Not sure why )
+
+
 ### Result
 
 You should be able to see new data sources and data entities that correspond with them
@@ -93,3 +197,4 @@ You should be able to see new data sources and data entities that correspond wit
 **My entities from the sample data aren't shown in the platform.**
 
 Check the logs by running **from the project root folder** `docker-compose -f docker/demo.yaml logs -f`
+
